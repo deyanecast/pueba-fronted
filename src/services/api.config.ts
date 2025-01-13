@@ -9,27 +9,25 @@ const api = axios.create({
         'Content-Type': 'application/json',
         'Accept': 'application/json',
     },
-    withCredentials: false, // Disable sending cookies for cross-origin requests
-    timeout: 60000, // Increase timeout to 30 seconds since Render might need time to wake up
+    withCredentials: false
 });
 
 // Configure retry mechanism
 axiosRetry(api, { 
     retries: 3,
-    retryDelay: (retryCount: number) => {
-        return retryCount * 2000; // Wait 2s, 4s, 6s between retries
+    retryDelay: (retryCount) => {
+        return retryCount * 1000; // Esperar 1s, 2s, 3s entre reintentos
     },
-    retryCondition: (error: AxiosError) => {
-        // Retry on timeout errors and network errors
-        return axiosRetry.isNetworkOrIdempotentRequestError(error) || 
-               error.code === 'ECONNABORTED';
+    retryCondition: (error) => {
+        return axiosRetry.isNetworkOrIdempotentRequestError(error);
     }
 });
 
 // Add request interceptor for debugging
 api.interceptors.request.use(
     config => {
-        console.log('Making request to:', config.url);
+        console.log('Request URL:', config.url);
+        console.log('Request Data:', config.data);
         return config;
     },
     error => {
@@ -40,14 +38,16 @@ api.interceptors.request.use(
 
 // Add response interceptor for error handling
 api.interceptors.response.use(
-    response => response,
+    response => {
+        console.log('Response:', response.data);
+        return response;
+    },
     (error: AxiosError) => {
-        if (error.message === 'Network Error') {
-            console.error('No se puede conectar al servidor. Por favor, verifique su conexión y que el servidor esté funcionando.');
-        } else if (error.code === 'ERR_NAME_NOT_RESOLVED') {
-            console.error('No se puede resolver el nombre del servidor. Por favor, verifique la URL del backend.');
-        } else if (error.code === 'ECONNABORTED') {
-            console.error('La conexión ha excedido el tiempo de espera. El servidor puede estar iniciándose, por favor espere un momento e intente nuevamente.');
+        if (error.response) {
+            console.error('Error Data:', error.response.data);
+            console.error('Error Status:', error.response.status);
+        } else if (error.request) {
+            console.error('No se recibió respuesta del servidor. La petición sigue en proceso...');
         }
         return Promise.reject(error);
     }

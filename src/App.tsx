@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
 import Reports from './pages/Reports';
+import Combos from './pages/Combos';
 
 function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
   const location = useLocation();
@@ -29,13 +30,14 @@ function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <span className="text-xl font-bold text-gray-800">
-                Inventory System
+                Sistema de Mariscos
               </span>
             </div>
             <div className="flex items-center space-x-4">
               <NavLink to="/">Dashboard</NavLink>
-              <NavLink to="/inventory">Inventory</NavLink>
-              <NavLink to="/reports">Reports</NavLink>
+              <NavLink to="/inventory">Inventario</NavLink>
+              <NavLink to="/combos">Combos</NavLink>
+              <NavLink to="/reports">Reportes</NavLink>
             </div>
           </div>
         </div>
@@ -54,6 +56,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/inventory" element={<Inventory />} />
+          <Route path="/combos" element={<Combos />} />
           <Route path="/reports" element={<Reports />} />
         </Routes>
       </Layout>
