@@ -95,7 +95,7 @@ export default function Inventory() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
           <div className="text-xl font-semibold mb-2">Cargando...</div>
           <div className="text-gray-500">Por favor espere mientras se cargan los productos</div>
@@ -106,7 +106,7 @@ export default function Inventory() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
           <div className="text-xl font-semibold mb-2 text-red-600">Error</div>
           <div className="text-gray-700 mb-4">{error}</div>
@@ -122,11 +122,11 @@ export default function Inventory() {
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Inventory Management</h1>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Inventory Management</h1>
 
       {/* Product Form */}
-      <div className="bg-white p-6 rounded-lg shadow mb-6">
+      <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
         <h2 className="text-lg font-semibold mb-4">
           {editingProduct ? 'Edit Product' : 'Add New Product'}
         </h2>
@@ -138,11 +138,11 @@ export default function Inventory() {
               name="nombre"
               value={formData.nombre}
               onChange={handleInputChange}
-              className="w-full p-2 border rounded"
+              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Cantidad (Libras)</label>
               <input
@@ -150,7 +150,7 @@ export default function Inventory() {
                 name="cantidadLibras"
                 value={formData.cantidadLibras}
                 onChange={handleInputChange}
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 min="0"
                 step="0.01"
                 required
@@ -163,7 +163,7 @@ export default function Inventory() {
                 name="precioPorLibra"
                 value={formData.precioPorLibra}
                 onChange={handleInputChange}
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 min="0"
                 step="0.01"
                 required
@@ -177,15 +177,15 @@ export default function Inventory() {
               name="tipoEmpaque"
               value={formData.tipoEmpaque}
               onChange={handleInputChange}
-              className="w-full p-2 border rounded"
+              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
               placeholder="Ej: Caja, Bolsa, etc."
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               {editingProduct ? 'Update Product' : 'Add Product'}
             </button>
@@ -193,7 +193,7 @@ export default function Inventory() {
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
                 Cancel
               </button>
@@ -203,31 +203,41 @@ export default function Inventory() {
       </div>
 
       {/* Products List */}
-      {products.length > 0 ? (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full">
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad (Libras)</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio/Libra</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo Empaque</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor Total</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio/Libra</th>
+                <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Empaque</th>
+                <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Total</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-200">
               {products.map(product => (
-                <tr key={product.productoId}>
-                  <td className="px-6 py-4">{product.nombre}</td>
-                  <td className="px-6 py-4">{product.cantidadLibras}</td>
-                  <td className="px-6 py-4">${product.precioPorLibra.toFixed(2)}</td>
-                  <td className="px-6 py-4">{product.tipoEmpaque}</td>
-                  <td className="px-6 py-4">${(product.valorTotal || 0).toFixed(2)}</td>
-                  <td className="px-6 py-4">
+                <tr key={product.productoId} className="hover:bg-gray-50">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{product.nombre}</div>
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{product.cantidadLibras}</div>
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">${product.precioPorLibra.toFixed(2)}</div>
+                  </td>
+                  <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{product.tipoEmpaque}</div>
+                  </td>
+                  <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">${(product.valorTotal || 0).toFixed(2)}</div>
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm">
                     <button
                       onClick={() => handleEdit(product)}
-                      className="text-blue-600 hover:text-blue-900"
+                      className="text-blue-600 hover:text-blue-900 focus:outline-none focus:underline"
                     >
                       Edit
                     </button>
@@ -237,11 +247,12 @@ export default function Inventory() {
             </tbody>
           </table>
         </div>
-      ) : (
-        <div className="text-center py-8 bg-white rounded-lg shadow">
-          <p className="text-gray-500">No hay productos disponibles</p>
-        </div>
-      )}
+        {products.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-gray-500">No hay productos disponibles</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 } 

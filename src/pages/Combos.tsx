@@ -21,7 +21,6 @@ export default function Combos() {
     estaActivo: true
   });
 
-  // Estado para el producto que se está agregando al combo
   const [selectedProduct, setSelectedProduct] = useState<{
     productoId: number;
     cantidad: number;
@@ -93,7 +92,6 @@ export default function Combos() {
           cantidad: selectedProduct.cantidad
         }]
       }));
-      // Reset selected product
       setSelectedProduct({ productoId: 0, cantidad: 0 });
     }
   };
@@ -121,13 +119,11 @@ export default function Combos() {
       setError(null);
       setSavingCombo(true);
       
-      // Asegurarnos que los productos tengan el formato correcto
       const productosFormateados = formData.productos.map(item => ({
         productoId: Number(item.productoId),
         cantidad: Number(item.cantidad)
       }));
 
-      // Crear el objeto con el formato exacto que espera la API
       const comboData = {
         nombre: formData.nombre.trim(),
         descripcion: formData.descripcion.trim(),
@@ -136,13 +132,10 @@ export default function Combos() {
         estaActivo: true
       };
 
-      console.log('Enviando combo:', JSON.stringify(comboData, null, 2));
-
       if (editingCombo?.comboId) {
         await ComboService.update(editingCombo.comboId, comboData);
       } else {
-        const response = await ComboService.create(comboData);
-        console.log('Respuesta del servidor:', response);
+        await ComboService.create(comboData);
       }
       
       await fetchCombos();
@@ -151,7 +144,6 @@ export default function Combos() {
     } catch (error) {
       console.error('Error saving combo:', error);
       if (axios.isAxiosError(error) && error.response) {
-        // Mostrar el mensaje de error específico del servidor si está disponible
         const errorMessage = error.response.data?.message || 'Error al procesar la solicitud en el servidor';
         setError(`Error: ${errorMessage}`);
       } else {
@@ -186,7 +178,7 @@ export default function Combos() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
           <div className="text-xl font-semibold mb-2">{loadingMessage}</div>
           <div className="text-gray-500">
@@ -200,8 +192,8 @@ export default function Combos() {
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Gestión de Combos</h1>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Gestión de Combos</h1>
 
       {error && (
         <div className="mb-4 p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
@@ -210,7 +202,7 @@ export default function Combos() {
       )}
 
       {/* Combo Form */}
-      <div className="bg-white p-6 rounded-lg shadow mb-6">
+      <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
         <h2 className="text-lg font-semibold mb-4">
           {editingCombo ? 'Editar Combo' : 'Crear Nuevo Combo'}
         </h2>
@@ -222,7 +214,7 @@ export default function Combos() {
               name="nombre"
               value={formData.nombre}
               onChange={handleInputChange}
-              className="w-full p-2 border rounded"
+              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             />
           </div>
@@ -232,7 +224,7 @@ export default function Combos() {
               name="descripcion"
               value={formData.descripcion}
               onChange={handleInputChange}
-              className="w-full p-2 border rounded"
+              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             />
           </div>
@@ -240,13 +232,13 @@ export default function Combos() {
           {/* Product Selection */}
           <div className="bg-gray-50 p-4 rounded-lg">
             <h3 className="font-medium mb-3">Agregar Productos al Combo</h3>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Producto</label>
                 <select
                   value={selectedProduct.productoId}
                   onChange={handleProductSelect}
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Seleccione un producto</option>
                   {products.map(product => (
@@ -262,7 +254,7 @@ export default function Combos() {
                   type="number"
                   value={selectedProduct.cantidad}
                   onChange={handleProductQuantityChange}
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   min="0"
                   step="0.5"
                 />
@@ -271,7 +263,7 @@ export default function Combos() {
                 <button
                   type="button"
                   onClick={addProductToCombo}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                  className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
                 >
                   Agregar al Combo
                 </button>
@@ -283,20 +275,20 @@ export default function Combos() {
           {formData.productos.length > 0 && (
             <div className="mt-4">
               <h3 className="font-medium mb-2">Productos en el Combo</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                 {formData.productos.map(item => {
                   const product = products.find(p => p.productoId === item.productoId);
                   return product ? (
-                    <div key={item.productoId} className="flex justify-between items-center py-2">
-                      <span>{product.nombre} - {item.cantidad} lb</span>
-                      <div className="flex items-center gap-4">
-                        <span className="text-gray-600">
+                    <div key={item.productoId} className="flex flex-wrap justify-between items-center py-2 gap-2">
+                      <span className="text-sm">{product.nombre} - {item.cantidad} lb</span>
+                      <div className="flex items-center gap-2 sm:gap-4">
+                        <span className="text-sm text-gray-600">
                           ${(product.precioPorLibra * item.cantidad).toFixed(2)}
                         </span>
                         <button
                           type="button"
                           onClick={() => removeProductFromCombo(item.productoId)}
-                          className="text-red-600 hover:text-red-800"
+                          className="text-red-600 hover:text-red-800 focus:outline-none focus:underline text-sm"
                         >
                           Eliminar
                         </button>
@@ -321,7 +313,7 @@ export default function Combos() {
               name="precio"
               value={formData.precio}
               onChange={handleInputChange}
-              className="w-full p-2 border rounded"
+              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               min="0"
               step="0.01"
               required
@@ -333,26 +325,22 @@ export default function Combos() {
             )}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               type="submit"
               disabled={savingCombo}
-              className={`px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 ${
+              className={`px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
                 savingCombo ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
-              {savingCombo ? (
-                'Guardando...'
-              ) : (
-                editingCombo ? 'Actualizar Combo' : 'Crear Combo'
-              )}
+              {savingCombo ? 'Guardando...' : (editingCombo ? 'Actualizar Combo' : 'Crear Combo')}
             </button>
             {editingCombo && (
               <button
                 type="button"
                 onClick={resetForm}
                 disabled={savingCombo}
-                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50"
               >
                 Cancelar
               </button>
@@ -362,24 +350,29 @@ export default function Combos() {
       </div>
 
       {/* Combos List */}
-      {combos.length > 0 ? (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full">
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Productos</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+                <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Productos</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {combos.map(combo => (
-                <tr key={combo.comboId}>
-                  <td className="px-6 py-4">{combo.nombre}</td>
-                  <td className="px-6 py-4">{combo.descripcion}</td>
-                  <td className="px-6 py-4">
+                <tr key={combo.comboId} className="hover:bg-gray-50">
+                  <td className="px-4 sm:px-6 py-4">
+                    <div className="text-sm font-medium text-gray-900">{combo.nombre}</div>
+                    <div className="sm:hidden text-sm text-gray-500 mt-1">${combo.precio.toFixed(2)}</div>
+                  </td>
+                  <td className="hidden sm:table-cell px-6 py-4">
+                    <div className="text-sm text-gray-900">{combo.descripcion}</div>
+                  </td>
+                  <td className="hidden sm:table-cell px-6 py-4">
                     {combo.productos.map(item => {
                       const product = products.find(p => p.productoId === item.productoId);
                       return product ? (
@@ -389,17 +382,19 @@ export default function Combos() {
                       ) : null;
                     })}
                   </td>
-                  <td className="px-6 py-4">${combo.precio.toFixed(2)}</td>
-                  <td className="px-6 py-4">
+                  <td className="hidden sm:table-cell px-6 py-4">
+                    <div className="text-sm font-medium text-gray-900">${combo.precio.toFixed(2)}</div>
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 space-x-2 whitespace-nowrap">
                     <button
                       onClick={() => handleEdit(combo)}
-                      className="text-blue-600 hover:text-blue-900 mr-4"
+                      className="text-blue-600 hover:text-blue-900 focus:outline-none focus:underline text-sm"
                     >
                       Editar
                     </button>
                     <button
                       onClick={() => ComboService.toggleState(combo.comboId!)}
-                      className={`${
+                      className={`text-sm focus:outline-none focus:underline ${
                         combo.estaActivo 
                           ? 'text-red-600 hover:text-red-900'
                           : 'text-green-600 hover:text-green-900'
@@ -413,11 +408,12 @@ export default function Combos() {
             </tbody>
           </table>
         </div>
-      ) : (
-        <div className="text-center py-8 bg-white rounded-lg shadow">
-          <p className="text-gray-500">No hay combos disponibles</p>
-        </div>
-      )}
+        {combos.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-gray-500">No hay combos disponibles</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 } 
