@@ -47,6 +47,9 @@ export const ProductService = {
     // Get product by ID
     getById: (id: number) => api.get(`/api/productos/${id}`),
 
+    // Get active products
+    getActive: () => api.get('/api/productos/active'),
+
     // Create new product
     create: (product: Omit<Product, 'productoId' | 'ultimaActualizacion' | 'valorTotal'>) => 
         api.post('/api/productos', product),
@@ -55,24 +58,18 @@ export const ProductService = {
     update: (id: number, product: Partial<Product>) => 
         api.put(`/api/productos/${id}`, product),
 
-    // Delete product
-    delete: (id: number) => api.delete(`/api/productos/${id}`),
+    // Update product status
+    updateStatus: (id: number) => api.patch(`/api/productos/${id}/status`),
 
-    // Toggle product state
-    toggleState: (id: number) => api.patch(`/api/productos/${id}/toggle-estado`),
+    // Validate product stock
+    validateStock: (id: number) => api.get(`/api/productos/${id}/validate-stock`),
+
+    // Update product stock
+    updateStock: (id: number, stock: number) => api.patch(`/api/productos/${id}/stock`, { stock }),
 
     // Search products with filters
     search: (params: ProductSearchParams) => api.get('/api/productos/buscar', { params }),
 
-    // Get low stock products
-    getLowStock: () => api.get('/api/productos/bajo-stock'),
-
-    // Get product sales report
-    getVentasReporte: (fechaInicio: string, fechaFin: string) => 
-        api.get('/api/productos/reporte-ventas', { 
-            params: { fechaInicio, fechaFin } 
-        }),
-        
     // Helper function to check if stock is low (below 5 pounds)
     esBajoStock: (cantidadLibras: number): boolean => cantidadLibras <= 5
 }; 

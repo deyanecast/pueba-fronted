@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Product, ProductService } from '../services/ProductService';
 import { Combo } from '../services/ProductService';
+import ComboService from '../services/ComboService';
 import { VentaService, VentaInput } from '../services/VentaService';
 import { Cart, CartItem } from '../types/cart.types';
 
@@ -14,6 +15,8 @@ const VentasPage = () => {
         cliente: '',
         observaciones: ''
     });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         loadProductos();
@@ -22,30 +25,56 @@ const VentasPage = () => {
 
     const loadProductos = async () => {
         try {
-            const response = await ProductService.getAll();
+            const response = await ProductService.getActive();
             setProductos(response.data);
         } catch (error) {
             console.error('Error al cargar productos:', error);
+            setError('Error al cargar productos');
         }
     };
 
     const loadCombos = async () => {
         try {
-            const response = await ProductService.getAll(); // Cambiar por ComboService cuando exista
+            const response = await ComboService.getActive();
             setCombos(response.data);
         } catch (error) {
             console.error('Error al cargar combos:', error);
+            setError('Error al cargar combos');
+        } finally {
+            setLoading(false);
         }
     };
 
-    const addToCart = (item: Product | Combo, tipo: 'Producto' | 'Combo') => {
+    const validateStock = async (item: Product | Combo, tipo: 'Producto' | 'Combo', cantidad: number) => {
+        try {
+            const id = tipo === 'Producto' ? (item as Product).productoId : (item as Combo).comboId;
+            if (!id) return false;
+
+            const response = tipo === 'Producto' 
+                ? await ProductService.validateStock(id)
+                : await ComboService.validateStock(id);
+
+            return response.data.hasStock;
+        } catch (error) {
+            console.error('Error al validar stock:', error);
+            return false;
+        }
+    };
+
+    const addToCart = async (item: Product | Combo, tipo: 'Producto' | 'Combo') => {
+        const hasStock = await validateStock(item, tipo, 1);
+        if (!hasStock) {
+            alert('No hay suficiente stock disponible');
+            return;
+        }
+
         const newItem: CartItem = {
             tipo,
             item,
             cantidad: 1,
             subtotal: tipo === 'Producto' 
-                ? (item as Product).precioPorLibra 
-                : (item as Combo).precio
+                ? (item as Product).precioPorLibra * 1
+                : (item as Combo).precio * 1
         };
 
         setCart(prevCart => {
@@ -91,13 +120,22 @@ const VentasPage = () => {
     };
 
     const calculateTotal = (items: CartItem[]): number => {
-        return items.reduce((sum, item) => sum + item.subtotal, 0);
+        return Number(items.reduce((sum, item) => sum + item.subtotal, 0).toFixed(2));
     };
 
     const handleCheckout = async () => {
         if (!cart.cliente || cart.items.length === 0) {
             alert('Por favor ingrese el nombre del cliente y agregue items al carrito');
             return;
+        }
+
+        // Validar stock de todos los items antes de procesar
+        for (const item of cart.items) {
+            const hasStock = await validateStock(item.item, item.tipo, item.cantidad);
+            if (!hasStock) {
+                alert(`No hay suficiente stock para ${item.item.nombre}`);
+                return;
+            }
         }
 
         const ventaInput: VentaInput = {
@@ -109,7 +147,8 @@ const VentasPage = () => {
                     : (item.item as Combo).comboId!,
                 cantidad: item.cantidad
             })),
-            observaciones: cart.observaciones
+            observaciones: cart.observaciones,
+            total: cart.total
         };
 
         try {
@@ -121,11 +160,44 @@ const VentasPage = () => {
                 observaciones: ''
             });
             alert('Venta realizada con éxito');
+            // Recargar productos y combos para actualizar stock
+            loadProductos();
+            loadCombos();
         } catch (error) {
             console.error('Error al procesar la venta:', error);
             alert('Error al procesar la venta');
         }
     };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[50vh]">
+                <div className="text-center">
+                    <div className="text-xl font-semibold">Cargando...</div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex items-center justify-center min-h-[50vh]">
+                <div className="text-center text-red-600">
+                    <div className="text-xl font-semibold">{error}</div>
+                    <button 
+                        onClick={() => {
+                            setError(null);
+                            loadProductos();
+                            loadCombos();
+                        }}
+                        className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                        Reintentar
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="container mx-auto px-4 py-8">

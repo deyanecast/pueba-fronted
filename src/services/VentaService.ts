@@ -16,6 +16,7 @@ export interface VentaInput {
     cliente: string;
     items: ItemVentaInput[];
     observaciones?: string;
+    total: number;
 }
 
 export interface VentaResponse {
@@ -27,10 +28,14 @@ export interface VentaResponse {
     fechaVenta: string;
 }
 
+export interface DateRange {
+    startDate: string;
+    endDate: string;
+}
+
 export interface ReporteVentas {
     totalVentas: number;
     montoTotal: number;
-    ventas: VentaResponse[];
 }
 
 export const VentaService = {
@@ -43,6 +48,11 @@ export const VentaService = {
     // Create new sale
     create: (venta: VentaInput) => api.post<VentaResponse>('/api/ventas', venta),
 
-    // Get sales report
-    getReporte: () => api.get<ReporteVentas>('/api/ventas/reporte')
+    // Get sales by date range
+    getByDateRange: (range: DateRange) => 
+        api.get<VentaResponse[]>('/api/ventas/range', { params: range }),
+
+    // Get total sales by date
+    getTotalByDate: (date: string) => 
+        api.get<ReporteVentas>('/api/ventas/total/date', { params: { date } })
 }; 

@@ -1,35 +1,44 @@
 import { useState, useEffect } from 'react';
-import { Sale } from '../types';
-import { getSalesData } from '../services/api';
+import { VentaService, VentaResponse, DateRange } from '../services/VentaService';
 
 type TimeFrame = 'day' | 'month';
 
+interface SaleStats {
+  total: number;
+  count: number;
+}
+
 export default function Reports() {
-  const [sales, setSales] = useState<Sale[]>([]);
+  const [sales, setSales] = useState<VentaResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('day');
   const [error, setError] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange>({
+    startDate: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0]
+  });
 
   useEffect(() => {
     fetchSales();
-  }, []);
+  }, [timeFrame, dateRange]);
 
   const fetchSales = async () => {
     try {
       setError(null);
-      const response = await getSalesData();
+      setLoading(true);
+      const response = await VentaService.getByDateRange(dateRange);
       setSales(response.data);
     } catch (error) {
-      console.error('Error fetching sales:', error);
+      console.error('Error al cargar las ventas:', error);
       setError('Error al cargar los datos de ventas. Por favor, intente nuevamente.');
     } finally {
       setLoading(false);
     }
   };
 
-  const groupSalesByDate = (sales: Sale[]) => {
+  const groupSalesByDate = (sales: VentaResponse[]) => {
     return sales.reduce((acc, sale) => {
-      const date = new Date(sale.sale_date);
+      const date = new Date(sale.fechaVenta);
       const key = timeFrame === 'day' 
         ? date.toISOString().split('T')[0]
         : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -41,10 +50,27 @@ export default function Reports() {
         };
       }
       
-      acc[key].total += sale.total_amount;
-      acc[key].count += sale.quantity;
+      acc[key].total += sale.total;
+      acc[key].count += sale.items.reduce((sum, item) => sum + item.cantidad, 0);
       return acc;
-    }, {} as Record<string, { total: number; count: number }>);
+    }, {} as Record<string, SaleStats>);
+  };
+
+  const handleTimeFrameChange = (newTimeFrame: TimeFrame) => {
+    setTimeFrame(newTimeFrame);
+    const today = new Date();
+    let startDate: Date;
+
+    if (newTimeFrame === 'day') {
+      startDate = new Date(today.setMonth(today.getMonth() - 1));
+    } else {
+      startDate = new Date(today.setMonth(today.getMonth() - 12));
+    }
+
+    setDateRange({
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: new Date().toISOString().split('T')[0]
+    });
   };
 
   const groupedSales = groupSalesByDate(sales);
@@ -54,8 +80,8 @@ export default function Reports() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
-          <div className="text-xl font-semibold mb-2">Loading...</div>
-          <div className="text-gray-500">Please wait while we fetch the sales data</div>
+          <div className="text-xl font-semibold mb-2">Cargando...</div>
+          <div className="text-gray-500">Por favor espere mientras cargamos los datos de ventas</div>
         </div>
       </div>
     );
@@ -71,7 +97,7 @@ export default function Reports() {
             onClick={fetchSales}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
-            Retry
+            Reintentar
           </button>
         </div>
       </div>
@@ -81,27 +107,27 @@ export default function Reports() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-bold">Sales Reports</h1>
+        <h1 className="text-2xl font-bold">Reporte de Ventas</h1>
         <div className="flex space-x-2">
           <button
-            onClick={() => setTimeFrame('day')}
+            onClick={() => handleTimeFrameChange('day')}
             className={`px-4 py-2 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
               timeFrame === 'day'
                 ? 'bg-blue-600 text-white focus:ring-blue-500'
                 : 'bg-gray-200 hover:bg-gray-300 focus:ring-gray-500'
             }`}
           >
-            Daily
+            Diario
           </button>
           <button
-            onClick={() => setTimeFrame('month')}
+            onClick={() => handleTimeFrameChange('month')}
             className={`px-4 py-2 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
               timeFrame === 'month'
                 ? 'bg-blue-600 text-white focus:ring-blue-500'
                 : 'bg-gray-200 hover:bg-gray-300 focus:ring-gray-500'
             }`}
           >
-            Monthly
+            Mensual
           </button>
         </div>
       </div>
@@ -112,16 +138,16 @@ export default function Reports() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {timeFrame === 'day' ? 'Date' : 'Month'}
+                  {timeFrame === 'day' ? 'Fecha' : 'Mes'}
                 </th>
                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total Sales
+                  Total Ventas
                 </th>
                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Items Sold
+                  Items Vendidos
                 </th>
                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Average Sale
+                  Promedio por Venta
                 </th>
               </tr>
             </thead>
@@ -133,8 +159,8 @@ export default function Reports() {
                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
                         {timeFrame === 'day'
-                          ? new Date(date).toLocaleDateString()
-                          : new Date(date + '-01').toLocaleDateString(undefined, {
+                          ? new Date(date).toLocaleDateString('es-ES')
+                          : new Date(date + '-01').toLocaleDateString('es-ES', {
                               year: 'numeric',
                               month: 'long'
                             })}
@@ -161,7 +187,7 @@ export default function Reports() {
         </div>
         {sortedDates.length === 0 && (
           <div className="text-center py-8">
-            <p className="text-gray-500">No sales data available</p>
+            <p className="text-gray-500">No hay datos de ventas disponibles</p>
           </div>
         )}
       </div>

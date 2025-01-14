@@ -38,10 +38,10 @@ export default function Combos() {
     try {
       setError(null);
       setLoadingMessage('Cargando combos...');
-      const response = await ComboService.getAll();
+      const response = await ComboService.getActive();
       setCombos(response.data);
     } catch (err) {
-      console.error('Error fetching combos:', err);
+      console.error('Error al cargar combos:', err);
       setError('No se pudieron cargar los combos. Los datos se actualizarán automáticamente cuando el servidor responda.');
     }
   };
@@ -49,10 +49,10 @@ export default function Combos() {
   const fetchProducts = async () => {
     try {
       setLoadingMessage('Cargando productos...');
-      const response = await ProductService.getAll();
+      const response = await ProductService.getActive();
       setProducts(response.data);
     } catch (err) {
-      console.error('Error fetching products:', err);
+      console.error('Error al cargar productos:', err);
       setError('No se pudieron cargar los productos. Los datos se actualizarán automáticamente cuando el servidor responda.');
     } finally {
       setLoading(false);
@@ -83,16 +83,49 @@ export default function Combos() {
     }));
   };
 
-  const addProductToCombo = () => {
+  const validateComboStock = async (comboId: number) => {
+    try {
+      const response = await ComboService.validateStock(comboId);
+      return response.data.hasStock;
+    } catch (error) {
+      console.error('Error al validar stock del combo:', error);
+      return false;
+    }
+  };
+
+  const calculateComboTotal = async (comboId: number) => {
+    try {
+      const response = await ComboService.calculateTotal(comboId);
+      return response.data.total;
+    } catch (error) {
+      console.error('Error al calcular total del combo:', error);
+      return 0;
+    }
+  };
+
+  const addProductToCombo = async () => {
     if (selectedProduct.productoId && selectedProduct.cantidad > 0) {
-      setFormData(prev => ({
-        ...prev,
-        productos: [...prev.productos, {
-          productoId: selectedProduct.productoId,
-          cantidad: selectedProduct.cantidad
-        }]
-      }));
-      setSelectedProduct({ productoId: 0, cantidad: 0 });
+      try {
+        // Validar stock del producto
+        const hasStock = await ProductService.validateStock(selectedProduct.productoId);
+        if (!hasStock.data.hasStock) {
+          setError('No hay suficiente stock disponible para este producto');
+          return;
+        }
+
+        setFormData(prev => ({
+          ...prev,
+          productos: [...prev.productos, {
+            productoId: selectedProduct.productoId,
+            cantidad: selectedProduct.cantidad
+          }]
+        }));
+        setSelectedProduct({ productoId: 0, cantidad: 0 });
+        setError(null);
+      } catch (error) {
+        console.error('Error al validar stock:', error);
+        setError('Error al validar el stock del producto');
+      }
     }
   };
 
@@ -101,16 +134,6 @@ export default function Combos() {
       ...prev,
       productos: prev.productos.filter(p => p.productoId !== productoId)
     }));
-  };
-
-  const calculateTotalPrice = () => {
-    return formData.productos.reduce((total, item) => {
-      const product = products.find(p => p.productoId === item.productoId);
-      if (product) {
-        return total + (product.precioPorLibra * item.cantidad);
-      }
-      return total;
-    }, 0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,7 +156,7 @@ export default function Combos() {
       };
 
       if (editingCombo?.comboId) {
-        await ComboService.update(editingCombo.comboId, comboData);
+        await ComboService.updateStatus(editingCombo.comboId);
       } else {
         await ComboService.create(comboData);
       }
@@ -142,7 +165,7 @@ export default function Combos() {
       resetForm();
       setError(null);
     } catch (error) {
-      console.error('Error saving combo:', error);
+      console.error('Error al guardar combo:', error);
       if (axios.isAxiosError(error) && error.response) {
         const errorMessage = error.response.data?.message || 'Error al procesar la solicitud en el servidor';
         setError(`Error: ${errorMessage}`);
@@ -163,6 +186,16 @@ export default function Combos() {
       productos: combo.productos,
       estaActivo: combo.estaActivo ?? true
     });
+  };
+
+  const handleToggleStatus = async (comboId: number) => {
+    try {
+      await ComboService.updateStatus(comboId);
+      await fetchCombos();
+    } catch (error) {
+      console.error('Error al actualizar estado del combo:', error);
+      setError('Error al actualizar el estado del combo');
+    }
   };
 
   const resetForm = () => {
