@@ -84,6 +84,14 @@ export default function Combos() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    if (savingCombo) return;
+    if (formData.productos.length === 0) {
+      setError('Debe agregar al menos un producto al combo');
+      return;
+    }
+    
     setSavingCombo(true);
     
     try {
@@ -332,9 +340,9 @@ export default function Combos() {
           <div className="flex gap-2">
             <button
               type="submit"
-              disabled={savingCombo}
+              disabled={savingCombo || formData.productos.length === 0}
               className={`px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                savingCombo ? 'opacity-50 cursor-not-allowed' : ''
+                (savingCombo || formData.productos.length === 0) ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
               {savingCombo ? 'Guardando...' : (editingCombo ? 'Actualizar Combo' : 'Crear Combo')}
