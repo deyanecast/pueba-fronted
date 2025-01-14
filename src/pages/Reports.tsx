@@ -50,8 +50,8 @@ export default function Reports() {
         };
       }
       
-      acc[key].total += sale.total;
-      acc[key].count += sale.items.reduce((sum, item) => sum + item.cantidad, 0);
+      acc[key].total += sale.montoTotal;
+      acc[key].count += sale.detalles.reduce((sum: number, item) => sum + item.cantidadLibras, 0);
       return acc;
     }, {} as Record<string, SaleStats>);
   };

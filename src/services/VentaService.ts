@@ -2,12 +2,19 @@ import api from './api.config';
 import { Product } from './ProductService';
 import { Combo } from './combo.types';
 
-export interface DetalleVenta {
-    tipoItem: 'PRODUCTO' | 'COMBO';
-    productoId?: number;
-    comboId?: number;
+export interface DetalleVentaProducto {
+    tipoItem: 'PRODUCTO';
+    productoId: number;
     cantidadLibras: number;
 }
+
+export interface DetalleVentaCombo {
+    tipoItem: 'COMBO';
+    comboId: number;
+    cantidadLibras: number;
+}
+
+export type DetalleVenta = DetalleVentaProducto | DetalleVentaCombo;
 
 export interface VentaInput {
     cliente: string;
@@ -39,6 +46,11 @@ export interface DateRange {
     endDate: string;
 }
 
+export interface DailyStats {
+    date: string;
+    total: number;
+}
+
 export interface ReporteVentas {
     totalVentas: number;
     montoTotal: number;
@@ -60,5 +72,5 @@ export const VentaService = {
 
     // Get total sales by date
     getTotalByDate: (date: string) => 
-        api.get<ReporteVentas>('/api/ventas/total/date', { params: { date } })
+        api.get<DailyStats>('/api/ventas/total/date', { params: { date } }),
 }; 

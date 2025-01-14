@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Product } from '../services/ProductService';
 import { ProductService } from '../services/ProductService';
-import { VentaService, ReporteVentas } from '../services/VentaService';
+import { VentaService, DailyStats } from '../services/VentaService';
 
 export default function Dashboard() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [stats, setStats] = useState<ReporteVentas>({ totalVentas: 0, montoTotal: 0 });
+  const [stats, setStats] = useState<DailyStats>({ date: '', total: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,7 +19,7 @@ export default function Dashboard() {
         ]);
         
         setProducts(productsRes.data);
-        setStats(ventasRes.data);
+        setStats(ventasRes.data as DailyStats);
       } catch (error) {
         console.error('Error al cargar datos del dashboard:', error);
       } finally {
@@ -51,10 +51,10 @@ export default function Dashboard() {
         <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-2">Ventas del Día</h2>
           <p className="text-2xl sm:text-3xl font-bold">
-            ${stats.montoTotal.toFixed(2)}
+            ${stats.total.toFixed(2)}
           </p>
           <p className="text-sm text-gray-500 mt-1">
-            {stats.totalVentas} transacciones
+            Actualizado: {new Date(stats.date).toLocaleDateString()}
           </p>
         </div>
 

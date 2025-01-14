@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Product, ProductService } from '../services/ProductService';
 import { Combo } from '../services/combo.types';
 import ComboService from '../services/ComboService';
-import { VentaService, VentaInput } from '../services/VentaService';
+import { VentaService, VentaInput, DetalleVentaProducto, DetalleVentaCombo } from '../services/VentaService';
 import { Cart, CartItem } from '../types/cart.types';
 
 const VentasPage = () => {
@@ -149,14 +149,23 @@ const VentasPage = () => {
             cliente: cart.cliente,
             observaciones: cart.observaciones || '',
             tipoVenta: 'NORMAL',
-            detalles: cart.items.map(item => ({
-                tipoItem: item.tipo,
-                ...(item.tipo === 'PRODUCTO'
-                    ? { productoId: (item.item as Product).productoId! }
-                    : { comboId: (item.item as Combo).comboId! }
-                ),
-                cantidadLibras: item.cantidadLibras
-            }))
+            detalles: cart.items.map(item => {
+                if (item.tipo === 'PRODUCTO') {
+                    const detalle: DetalleVentaProducto = {
+                        tipoItem: 'PRODUCTO',
+                        productoId: (item.item as Product).productoId!,
+                        cantidadLibras: item.cantidadLibras
+                    };
+                    return detalle;
+                } else {
+                    const detalle: DetalleVentaCombo = {
+                        tipoItem: 'COMBO',
+                        comboId: (item.item as Combo).comboId!,
+                        cantidadLibras: item.cantidadLibras
+                    };
+                    return detalle;
+                }
+            })
         };
 
         try {
