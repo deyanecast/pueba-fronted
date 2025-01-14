@@ -6,12 +6,9 @@ export interface Product {
     cantidadLibras: number;
     precioPorLibra: number;
     tipoEmpaque: string;
-    estaActivo?: boolean;
-    ultimaActualizacion?: string;
+    estaActivo: boolean;
     valorTotal?: number;
-    alertaBajoStock?: boolean;
-    ventaMediaLibra?: boolean;
-    descripcion?: string;
+    ultimaActualizacion?: string;
 }
 
 export interface Combo {
@@ -35,39 +32,12 @@ export interface ComboProducto {
     subtotal?: number;
 }
 
-export interface Venta {
-    ventaId?: number;
-    fecha: string;
-    cliente: string;
-    items: ItemVenta[];
-    total: number;
-    observaciones?: string;
-}
-
-export interface ItemVenta {
-    tipo: 'Producto' | 'Combo';
-    itemId: number;
-    cantidad: number;
-    precioUnitario: number;
-    subtotal: number;
-}
-
 export interface ProductSearchParams {
     nombre?: string;
     precioMin?: number;
     precioMax?: number;
     estado?: boolean;
     bajoStock?: boolean;
-}
-
-export interface ReporteVentas {
-    ventas: Venta[];
-    totalVentas: number;
-    totalGanancias: number;
-    ventasPorTipo: {
-        productos: number;
-        combos: number;
-    };
 }
 
 export const ProductService = {
@@ -94,12 +64,15 @@ export const ProductService = {
     // Search products with filters
     search: (params: ProductSearchParams) => api.get('/api/productos/buscar', { params }),
 
-    // Get low stock products (below 5 pounds)
+    // Get low stock products
     getLowStock: () => api.get('/api/productos/bajo-stock'),
 
     // Get product sales report
     getVentasReporte: (fechaInicio: string, fechaFin: string) => 
         api.get('/api/productos/reporte-ventas', { 
             params: { fechaInicio, fechaFin } 
-        })
+        }),
+        
+    // Helper function to check if stock is low (below 5 pounds)
+    esBajoStock: (cantidadLibras: number): boolean => cantidadLibras <= 5
 }; 

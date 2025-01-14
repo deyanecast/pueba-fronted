@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
 import Reports from './pages/Reports';
 import Combos from './pages/Combos';
+import VentasPage from './pages/VentasPage';
 
 function NavLink({ to, children, onClick }: { to: string; children: React.ReactNode; onClick?: () => void }) {
   const location = useLocation();
@@ -81,6 +82,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <div className="hidden md:flex md:items-center md:space-x-4">
               <NavLink to="/">Dashboard</NavLink>
               <NavLink to="/inventory">Inventario</NavLink>
+              <NavLink to="/ventas">Ventas</NavLink>
               <NavLink to="/combos">Combos</NavLink>
               <NavLink to="/reports">Reportes</NavLink>
             </div>
@@ -92,6 +94,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           <div className="px-2 pt-2 pb-3 space-y-1">
             <NavLink to="/" onClick={closeMenu}>Dashboard</NavLink>
             <NavLink to="/inventory" onClick={closeMenu}>Inventario</NavLink>
+            <NavLink to="/ventas" onClick={closeMenu}>Ventas</NavLink>
             <NavLink to="/combos" onClick={closeMenu}>Combos</NavLink>
             <NavLink to="/reports" onClick={closeMenu}>Reportes</NavLink>
           </div>
@@ -112,6 +115,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/inventory" element={<Inventory />} />
+          <Route path="/ventas" element={<VentasPage />} />
           <Route path="/combos" element={<Combos />} />
           <Route path="/reports" element={<Reports />} />
         </Routes>

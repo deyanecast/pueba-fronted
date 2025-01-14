@@ -1,34 +1,48 @@
 import api from './api.config';
-import { Venta, ReporteVentas } from './ProductService';
+
+export interface ItemVentaInput {
+    tipoItem: 'Producto' | 'Combo';
+    itemId: number;
+    cantidad: number;
+}
+
+export interface ItemVentaResponse extends ItemVentaInput {
+    nombre: string;
+    precioUnitario: number;
+    subtotal: number;
+}
+
+export interface VentaInput {
+    cliente: string;
+    items: ItemVentaInput[];
+    observaciones?: string;
+}
+
+export interface VentaResponse {
+    ventaId: number;
+    cliente: string;
+    items: ItemVentaResponse[];
+    observaciones: string;
+    total: number;
+    fechaVenta: string;
+}
+
+export interface ReporteVentas {
+    totalVentas: number;
+    montoTotal: number;
+    ventas: VentaResponse[];
+}
 
 export const VentaService = {
     // Get all sales
-    getAll: () => api.get('/api/ventas'),
+    getAll: () => api.get<VentaResponse[]>('/api/ventas'),
 
     // Get sale by ID
-    getById: (id: number) => api.get(`/api/ventas/${id}`),
+    getById: (id: number) => api.get<VentaResponse>(`/api/ventas/${id}`),
 
     // Create new sale
-    create: (venta: Omit<Venta, 'ventaId'>) => 
-        api.post('/api/ventas', venta),
+    create: (venta: VentaInput) => api.post<VentaResponse>('/api/ventas', venta),
 
-    // Get sales report by date range
-    getReporte: (fechaInicio: string, fechaFin: string): Promise<ReporteVentas> => 
-        api.get('/api/ventas/reporte', { 
-            params: { fechaInicio, fechaFin } 
-        }),
-
-    // Get today's sales
-    getVentasHoy: () => 
-        api.get('/api/ventas/hoy'),
-
-    // Get monthly sales
-    getVentasMes: () => 
-        api.get('/api/ventas/mes'),
-        
-    // Get sales by type (product or combo)
-    getVentasPorTipo: (tipo: 'Producto' | 'Combo', fechaInicio: string, fechaFin: string) => 
-        api.get('/api/ventas/por-tipo', { 
-            params: { tipo, fechaInicio, fechaFin } 
-        })
+    // Get sales report
+    getReporte: () => api.get<ReporteVentas>('/api/ventas/reporte')
 }; 
