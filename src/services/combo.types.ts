@@ -1,6 +1,6 @@
 export interface ComboProduct {
     productoId: number;
-    cantidad: number;
+    cantidadLibras: number;
 }
 
 export interface Combo {

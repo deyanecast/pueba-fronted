@@ -16,7 +16,7 @@ interface Product {
 
 interface ComboProduct {
   productoId: number;
-  cantidad: number;
+  cantidadLibras: number;
 }
 
 interface ComboFormData {
@@ -87,16 +87,20 @@ export default function Combos() {
     setSavingCombo(true);
     
     try {
+      const comboData = {
+        nombre: formData.nombre.trim(),
+        descripcion: formData.descripcion.trim(),
+        precio: Number(formData.precio),
+        productos: formData.productos.map(p => ({
+          productoId: p.productoId,
+          cantidadLibras: p.cantidadLibras
+        }))
+      };
+
       if (editingCombo) {
-        await ComboService.update(editingCombo.comboId!, {
-          ...formData,
-          productos: formData.productos
-        });
+        await ComboService.update(editingCombo.comboId!, comboData);
       } else {
-        await ComboService.create({
-          ...formData,
-          productos: formData.productos
-        });
+        await ComboService.create(comboData);
       }
       
       await fetchCombos();
@@ -104,7 +108,7 @@ export default function Combos() {
       setError('');
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        setError(error.message);
+        setError(error.response?.data?.message || 'Error al guardar el combo');
       } else {
         setError('Error al guardar el combo');
       }
@@ -117,7 +121,7 @@ export default function Combos() {
   const calculateTotal = (selectedProducts: ComboProduct[]) => {
     const total = selectedProducts.reduce((sum, product) => {
       const foundProduct = products.find(p => p.productoId === product.productoId);
-      return sum + (foundProduct?.precioPorLibra || 0) * product.cantidad;
+      return sum + (foundProduct?.precioPorLibra || 0) * product.cantidadLibras;
     }, 0);
     setTotalCalculado(total);
     return total;
@@ -140,7 +144,7 @@ export default function Combos() {
     if (selectedProduct && !formData.productos.some(p => p.productoId === selectedProduct.productoId)) {
       const newProduct: ComboProduct = {
         productoId: selectedProduct.productoId,
-        cantidad: selectedQuantity
+        cantidadLibras: selectedQuantity
       };
       const updatedProducts = [...formData.productos, newProduct];
       setFormData({
@@ -281,10 +285,10 @@ export default function Combos() {
                   const product = products.find(p => p.productoId === item.productoId);
                   return product ? (
                     <div key={item.productoId} className="flex justify-between items-center py-2 border-b">
-                      <span>{product.nombre} - {item.cantidad} lb</span>
+                      <span>{product.nombre} - {item.cantidadLibras} lb</span>
                       <div className="flex items-center gap-4">
                         <span className="text-gray-600">
-                          ${(product.precioPorLibra * item.cantidad).toFixed(2)}
+                          ${(product.precioPorLibra * item.cantidadLibras).toFixed(2)}
                         </span>
                         <button
                           type="button"
@@ -377,7 +381,7 @@ export default function Combos() {
                         const product = products.find(p => p.productoId === item.productoId);
                         return product ? (
                           <div key={item.productoId} className="text-sm text-gray-600">
-                            {product.nombre} ({item.cantidad} lb)
+                            {product.nombre} ({item.cantidadLibras} lb)
                           </div>
                         ) : null;
                       })}
