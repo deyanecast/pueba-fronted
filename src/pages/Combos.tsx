@@ -1,33 +1,49 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import ComboService from '../services/ComboService';
 import { ProductService } from '../services/ProductService';
-import { Combo, Product } from '../services/ProductService';
+import { Combo } from '../services/combo.types';
 import axios from 'axios';
 
+interface Product {
+  productoId: number;
+  nombre: string;
+  precio: number;
+  cantidadLibras: number;
+  precioPorLibra: number;
+  tipoEmpaque: string;
+  estaActivo: boolean;
+}
+
+interface ComboProduct {
+  productoId: number;
+  cantidad: number;
+}
+
+interface ComboFormData {
+  nombre: string;
+  descripcion: string;
+  precio: number;
+  productos: ComboProduct[];
+}
+
+const initialFormData: ComboFormData = {
+  nombre: '',
+  descripcion: '',
+  precio: 0,
+  productos: []
+};
+
 export default function Combos() {
-  const [combos, setCombos] = useState<Combo[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [formData, setFormData] = useState<ComboFormData>(initialFormData);
+  const [editingCombo, setEditingCombo] = useState<Combo | null>(null);
+  const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [savingCombo, setSavingCombo] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [loadingMessage, setLoadingMessage] = useState<string>('Cargando datos...');
-  const [editingCombo, setEditingCombo] = useState<Combo | null>(null);
-  
-  const [formData, setFormData] = useState<Omit<Combo, 'comboId' | 'fechaCreacion'>>({
-    nombre: '',
-    descripcion: '',
-    precio: 0,
-    productos: [],
-    estaActivo: true
-  });
-
-  const [selectedProduct, setSelectedProduct] = useState<{
-    productoId: number;
-    cantidad: number;
-  }>({
-    productoId: 0,
-    cantidad: 0
-  });
+  const [combos, setCombos] = useState<Combo[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [totalCalculado, setTotalCalculado] = useState<number>(0);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedQuantity, setSelectedQuantity] = useState<number>(1);
 
   useEffect(() => {
     fetchCombos();
@@ -36,145 +52,122 @@ export default function Combos() {
 
   const fetchCombos = async () => {
     try {
-      setError(null);
-      setLoadingMessage('Cargando combos...');
-      const response = await ComboService.getActive();
+      const response = await ComboService.getAll();
       setCombos(response.data);
-    } catch (err) {
-      console.error('Error al cargar combos:', err);
-      setError('No se pudieron cargar los combos. Los datos se actualizarán automáticamente cuando el servidor responda.');
-    }
-  };
-
-  const fetchProducts = async () => {
-    try {
-      setLoadingMessage('Cargando productos...');
-      const response = await ProductService.getActive();
-      setProducts(response.data);
-    } catch (err) {
-      console.error('Error al cargar productos:', err);
-      setError('No se pudieron cargar los productos. Los datos se actualizarán automáticamente cuando el servidor responda.');
+      setError('');
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        setError(error.message);
+      } else {
+        setError('Error al cargar los combos');
+      }
+      console.error('Error fetching combos:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'precio' ? Number(value) : value
-    }));
-  };
-
-  const handleProductSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const productoId = Number(e.target.value);
-    setSelectedProduct(prev => ({
-      ...prev,
-      productoId
-    }));
-  };
-
-  const handleProductQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const cantidad = Number(e.target.value);
-    setSelectedProduct(prev => ({
-      ...prev,
-      cantidad
-    }));
-  };
-
-  const validateComboStock = async (comboId: number) => {
+  const fetchProducts = async () => {
     try {
-      const response = await ComboService.validateStock(comboId);
-      return response.data.hasStock;
+      const response = await ProductService.getActive();
+      setProducts(response.data);
+      setError('');
     } catch (error) {
-      console.error('Error al validar stock del combo:', error);
-      return false;
-    }
-  };
-
-  const calculateComboTotal = async (comboId: number) => {
-    try {
-      const response = await ComboService.calculateTotal(comboId);
-      return response.data.total;
-    } catch (error) {
-      console.error('Error al calcular total del combo:', error);
-      return 0;
-    }
-  };
-
-  const addProductToCombo = async () => {
-    if (selectedProduct.productoId && selectedProduct.cantidad > 0) {
-      try {
-        // Validar stock del producto
-        const hasStock = await ProductService.validateStock(selectedProduct.productoId);
-        if (!hasStock.data.hasStock) {
-          setError('No hay suficiente stock disponible para este producto');
-          return;
-        }
-
-        setFormData(prev => ({
-          ...prev,
-          productos: [...prev.productos, {
-            productoId: selectedProduct.productoId,
-            cantidad: selectedProduct.cantidad
-          }]
-        }));
-        setSelectedProduct({ productoId: 0, cantidad: 0 });
-        setError(null);
-      } catch (error) {
-        console.error('Error al validar stock:', error);
-        setError('Error al validar el stock del producto');
+      if (axios.isAxiosError(error)) {
+        setError(error.message);
+      } else {
+        setError('Error al cargar los productos');
       }
+      console.error('Error fetching products:', error);
     }
-  };
-
-  const removeProductFromCombo = (productoId: number) => {
-    setFormData(prev => ({
-      ...prev,
-      productos: prev.productos.filter(p => p.productoId !== productoId)
-    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSavingCombo(true);
+    
     try {
-      setError(null);
-      setSavingCombo(true);
-      
-      const productosFormateados = formData.productos.map(item => ({
-        productoId: Number(item.productoId),
-        cantidad: Number(item.cantidad)
-      }));
-
-      const comboData = {
-        nombre: formData.nombre.trim(),
-        descripcion: formData.descripcion.trim(),
-        precio: Number(formData.precio),
-        productos: productosFormateados,
-        estaActivo: true
-      };
-
-      if (editingCombo?.comboId) {
-        await ComboService.updateStatus(editingCombo.comboId);
+      if (editingCombo) {
+        await ComboService.update(editingCombo.comboId!, {
+          ...formData,
+          productos: formData.productos
+        });
       } else {
-        await ComboService.create(comboData);
+        await ComboService.create({
+          ...formData,
+          productos: formData.productos
+        });
       }
       
       await fetchCombos();
       resetForm();
-      setError(null);
+      setError('');
     } catch (error) {
-      console.error('Error al guardar combo:', error);
-      if (axios.isAxiosError(error) && error.response) {
-        const errorMessage = error.response.data?.message || 'Error al procesar la solicitud en el servidor';
-        setError(`Error: ${errorMessage}`);
+      if (axios.isAxiosError(error)) {
+        setError(error.message);
       } else {
-        setError('Ocurrió un error al intentar guardar el combo. Por favor, verifique los datos e intente nuevamente.');
+        setError('Error al guardar el combo');
       }
+      console.error('Error saving combo:', error);
     } finally {
       setSavingCombo(false);
     }
+  };
+
+  const calculateTotal = (selectedProducts: ComboProduct[]) => {
+    const total = selectedProducts.reduce((sum, product) => {
+      const foundProduct = products.find(p => p.productoId === product.productoId);
+      return sum + (foundProduct?.precioPorLibra || 0) * product.cantidad;
+    }, 0);
+    setTotalCalculado(total);
+    return total;
+  };
+
+  const handleProductSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedProductId = parseInt(e.target.value);
+    const product = products.find(p => p.productoId === selectedProductId);
+    
+    if (product) {
+      setSelectedProduct(product);
+      setSelectedQuantity(1);
+    } else {
+      setSelectedProduct(null);
+      setSelectedQuantity(1);
+    }
+  };
+
+  const handleAddProduct = () => {
+    if (selectedProduct && !formData.productos.some(p => p.productoId === selectedProduct.productoId)) {
+      const newProduct: ComboProduct = {
+        productoId: selectedProduct.productoId,
+        cantidad: selectedQuantity
+      };
+      const updatedProducts = [...formData.productos, newProduct];
+      setFormData({
+        ...formData,
+        productos: updatedProducts
+      });
+      calculateTotal(updatedProducts);
+      setSelectedProduct(null);
+      setSelectedQuantity(1);
+    }
+  };
+
+  const handleRemoveProduct = (productId: number) => {
+    const updatedProducts = formData.productos.filter(p => p.productoId !== productId);
+    setFormData({
+      ...formData,
+      productos: updatedProducts
+    });
+    calculateTotal(updatedProducts);
+  };
+
+  const resetForm = () => {
+    setFormData(initialFormData);
+    setEditingCombo(null);
+    setError('');
+    setTotalCalculado(0);
+    setSelectedProduct(null);
   };
 
   const handleEdit = (combo: Combo) => {
@@ -183,29 +176,7 @@ export default function Combos() {
       nombre: combo.nombre,
       descripcion: combo.descripcion,
       precio: combo.precio,
-      productos: combo.productos,
-      estaActivo: combo.estaActivo ?? true
-    });
-  };
-
-  const handleToggleStatus = async (comboId: number) => {
-    try {
-      await ComboService.updateStatus(comboId);
-      await fetchCombos();
-    } catch (error) {
-      console.error('Error al actualizar estado del combo:', error);
-      setError('Error al actualizar el estado del combo');
-    }
-  };
-
-  const resetForm = () => {
-    setEditingCombo(null);
-    setFormData({
-      nombre: '',
-      descripcion: '',
-      precio: 0,
-      productos: [],
-      estaActivo: true
+      productos: combo.productos
     });
   };
 
@@ -213,12 +184,7 @@ export default function Combos() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
-          <div className="text-xl font-semibold mb-2">{loadingMessage}</div>
-          <div className="text-gray-500">
-            El servidor puede tardar unos momentos en responder.
-            <br />
-            Por favor, espere mientras se cargan los datos.
-          </div>
+          <div className="text-xl font-semibold">Cargando...</div>
         </div>
       </div>
     );
@@ -244,9 +210,8 @@ export default function Combos() {
             <label className="block text-sm font-medium mb-1">Nombre del Combo</label>
             <input
               type="text"
-              name="nombre"
               value={formData.nombre}
-              onChange={handleInputChange}
+              onChange={e => setFormData({ ...formData, nombre: e.target.value })}
               className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             />
@@ -254,22 +219,20 @@ export default function Combos() {
           <div>
             <label className="block text-sm font-medium mb-1">Descripción</label>
             <textarea
-              name="descripcion"
               value={formData.descripcion}
-              onChange={handleInputChange}
+              onChange={e => setFormData({ ...formData, descripcion: e.target.value })}
               className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             />
           </div>
 
-          {/* Product Selection */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-medium mb-3">Agregar Productos al Combo</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
+          <div>
+            <h3 className="text-sm font-medium mb-3">Agregar Productos al Combo</h3>
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
                 <label className="block text-sm font-medium mb-1">Producto</label>
                 <select
-                  value={selectedProduct.productoId}
+                  value={selectedProduct?.productoId || ''}
                   onChange={handleProductSelect}
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
@@ -281,47 +244,52 @@ export default function Combos() {
                   ))}
                 </select>
               </div>
-              <div>
+              <div className="w-32">
                 <label className="block text-sm font-medium mb-1">Cantidad (Libras)</label>
                 <input
                   type="number"
-                  value={selectedProduct.cantidad}
-                  onChange={handleProductQuantityChange}
+                  value={selectedQuantity}
+                  onChange={e => {
+                    const cantidad = parseFloat(e.target.value);
+                    if (cantidad > 0) {
+                      setSelectedQuantity(cantidad);
+                    }
+                  }}
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  min="0"
+                  min="0.5"
                   step="0.5"
+                  disabled={!selectedProduct}
                 />
               </div>
-              <div className="flex items-end">
-                <button
-                  type="button"
-                  onClick={addProductToCombo}
-                  className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                >
-                  Agregar al Combo
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleAddProduct}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                disabled={!selectedProduct}
+              >
+                Agregar
+              </button>
             </div>
           </div>
 
           {/* Selected Products List */}
           {formData.productos.length > 0 && (
-            <div className="mt-4">
-              <h3 className="font-medium mb-2">Productos en el Combo</h3>
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+            <div>
+              <h3 className="text-sm font-medium mb-2">Productos en el Combo</h3>
+              <div className="space-y-2">
                 {formData.productos.map(item => {
                   const product = products.find(p => p.productoId === item.productoId);
                   return product ? (
-                    <div key={item.productoId} className="flex flex-wrap justify-between items-center py-2 gap-2">
-                      <span className="text-sm">{product.nombre} - {item.cantidad} lb</span>
-                      <div className="flex items-center gap-2 sm:gap-4">
-                        <span className="text-sm text-gray-600">
+                    <div key={item.productoId} className="flex justify-between items-center py-2 border-b">
+                      <span>{product.nombre} - {item.cantidad} lb</span>
+                      <div className="flex items-center gap-4">
+                        <span className="text-gray-600">
                           ${(product.precioPorLibra * item.cantidad).toFixed(2)}
                         </span>
                         <button
                           type="button"
-                          onClick={() => removeProductFromCombo(item.productoId)}
-                          className="text-red-600 hover:text-red-800 focus:outline-none focus:underline text-sm"
+                          onClick={() => handleRemoveProduct(item.productoId)}
+                          className="text-red-600 hover:text-red-800 focus:outline-none focus:underline"
                         >
                           Eliminar
                         </button>
@@ -329,11 +297,9 @@ export default function Combos() {
                     </div>
                   ) : null;
                 })}
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <div className="flex justify-between font-medium">
-                    <span>Precio Total Calculado:</span>
-                    <span>${calculateTotalPrice().toFixed(2)}</span>
-                  </div>
+                <div className="flex justify-between font-medium pt-2">
+                  <span>Precio Total:</span>
+                  <span>${totalCalculado.toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -343,22 +309,23 @@ export default function Combos() {
             <label className="block text-sm font-medium mb-1">Precio Final del Combo</label>
             <input
               type="number"
-              name="precio"
               value={formData.precio}
-              onChange={handleInputChange}
+              onChange={e => setFormData({ ...formData, precio: parseFloat(e.target.value) })}
               className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               min="0"
               step="0.01"
               required
             />
-            {formData.precio < calculateTotalPrice() && (
+            {formData.precio > 0 && totalCalculado > 0 && (
               <p className="text-green-600 text-sm mt-1">
-                ¡Ahorro de ${(calculateTotalPrice() - formData.precio).toFixed(2)}!
+                {formData.precio < totalCalculado 
+                  ? `¡Ahorro de $${(totalCalculado - formData.precio).toFixed(2)}!`
+                  : 'El precio del combo debe ser menor al total para generar ahorro'}
               </p>
             )}
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2">
             <button
               type="submit"
               disabled={savingCombo}
@@ -389,8 +356,8 @@ export default function Combos() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
-                <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Productos</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Productos</th>
                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
               </tr>
@@ -400,53 +367,44 @@ export default function Combos() {
                 <tr key={combo.comboId} className="hover:bg-gray-50">
                   <td className="px-4 sm:px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">{combo.nombre}</div>
-                    <div className="sm:hidden text-sm text-gray-500 mt-1">${combo.precio.toFixed(2)}</div>
                   </td>
-                  <td className="hidden sm:table-cell px-6 py-4">
+                  <td className="px-6 py-4">
                     <div className="text-sm text-gray-900">{combo.descripcion}</div>
                   </td>
-                  <td className="hidden sm:table-cell px-6 py-4">
-                    {combo.productos.map(item => {
-                      const product = products.find(p => p.productoId === item.productoId);
-                      return product ? (
-                        <div key={item.productoId} className="text-sm">
-                          {product.nombre} ({item.cantidad} lb)
-                        </div>
-                      ) : null;
-                    })}
+                  <td className="px-6 py-4">
+                    <div className="space-y-1">
+                      {combo.productos.map(item => {
+                        const product = products.find(p => p.productoId === item.productoId);
+                        return product ? (
+                          <div key={item.productoId} className="text-sm text-gray-600">
+                            {product.nombre} ({item.cantidad} lb)
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
                   </td>
-                  <td className="hidden sm:table-cell px-6 py-4">
+                  <td className="px-4 sm:px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">${combo.precio.toFixed(2)}</div>
                   </td>
-                  <td className="px-4 sm:px-6 py-4 space-x-2 whitespace-nowrap">
+                  <td className="px-4 sm:px-6 py-4">
                     <button
                       onClick={() => handleEdit(combo)}
                       className="text-blue-600 hover:text-blue-900 focus:outline-none focus:underline text-sm"
                     >
                       Editar
                     </button>
-                    <button
-                      onClick={() => ComboService.toggleState(combo.comboId!)}
-                      className={`text-sm focus:outline-none focus:underline ${
-                        combo.estaActivo 
-                          ? 'text-red-600 hover:text-red-900'
-                          : 'text-green-600 hover:text-green-900'
-                      }`}
-                    >
-                      {combo.estaActivo ? 'Desactivar' : 'Activar'}
-                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {combos.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No hay combos disponibles</p>
+            </div>
+          )}
         </div>
-        {combos.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-gray-500">No hay combos disponibles</p>
-          </div>
-        )}
       </div>
     </div>
   );
-} 
+}
