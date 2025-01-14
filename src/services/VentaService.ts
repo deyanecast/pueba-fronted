@@ -1,31 +1,37 @@
 import api from './api.config';
+import { Product } from './ProductService';
+import { Combo } from './combo.types';
 
-export interface ItemVentaInput {
-    tipoItem: 'Producto' | 'Combo';
-    itemId: number;
-    cantidad: number;
-}
-
-export interface ItemVentaResponse extends ItemVentaInput {
-    nombre: string;
-    precioUnitario: number;
-    subtotal: number;
+export interface DetalleVenta {
+    tipoItem: 'PRODUCTO' | 'COMBO';
+    productoId?: number;
+    comboId?: number;
+    cantidadLibras: number;
 }
 
 export interface VentaInput {
     cliente: string;
-    items: ItemVentaInput[];
-    observaciones?: string;
-    total: number;
+    observaciones: string;
+    tipoVenta: 'NORMAL';
+    detalles: DetalleVenta[];
 }
 
 export interface VentaResponse {
     ventaId: number;
     cliente: string;
-    items: ItemVentaResponse[];
     observaciones: string;
-    total: number;
     fechaVenta: string;
+    montoTotal: number;
+    tipoVenta: string;
+    detalles: Array<{
+        detalleVentaId: number;
+        tipoItem: 'PRODUCTO' | 'COMBO';
+        producto: Product | null;
+        combo: Combo | null;
+        cantidadLibras: number;
+        precioUnitario: number;
+        subtotal: number;
+    }>;
 }
 
 export interface DateRange {

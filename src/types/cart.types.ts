@@ -1,10 +1,10 @@
 import { Product } from '../services/ProductService';
-import { Combo } from '../services/ProductService';
+import { Combo } from '../services/combo.types';
 
 export interface CartItem {
-    tipo: 'Producto' | 'Combo';
+    tipo: 'PRODUCTO' | 'COMBO';
     item: Product | Combo;
-    cantidad: number;
+    cantidadLibras: number;
     subtotal: number;
 }
 

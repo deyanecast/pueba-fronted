@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Product, ProductService } from '../services/ProductService';
-import { Combo } from '../services/ProductService';
+import { Combo } from '../services/combo.types';
 import ComboService from '../services/ComboService';
 import { VentaService, VentaInput } from '../services/VentaService';
 import { Cart, CartItem } from '../types/cart.types';
@@ -26,7 +26,9 @@ const VentasPage = () => {
     const loadProductos = async () => {
         try {
             const response = await ProductService.getActive();
-            setProductos(response.data);
+            if (response.data) {
+                setProductos(response.data);
+            }
         } catch (error) {
             console.error('Error al cargar productos:', error);
             setError('Error al cargar productos');
@@ -36,7 +38,9 @@ const VentasPage = () => {
     const loadCombos = async () => {
         try {
             const response = await ComboService.getActive();
-            setCombos(response.data);
+            if (response.data) {
+                setCombos(response.data);
+            }
         } catch (error) {
             console.error('Error al cargar combos:', error);
             setError('Error al cargar combos');
@@ -45,12 +49,15 @@ const VentasPage = () => {
         }
     };
 
-    const validateStock = async (item: Product | Combo, tipo: 'Producto' | 'Combo', cantidad: number) => {
+    const validateStock = async (item: Product | Combo, tipo: 'PRODUCTO' | 'COMBO') => {
         try {
-            const id = tipo === 'Producto' ? (item as Product).productoId : (item as Combo).comboId;
+            const id = tipo === 'PRODUCTO' 
+                ? (item as Product).productoId 
+                : (item as Combo).comboId;
+            
             if (!id) return false;
 
-            const response = tipo === 'Producto' 
+            const response = tipo === 'PRODUCTO' 
                 ? await ProductService.validateStock(id)
                 : await ComboService.validateStock(id);
 
@@ -61,8 +68,8 @@ const VentasPage = () => {
         }
     };
 
-    const addToCart = async (item: Product | Combo, tipo: 'Producto' | 'Combo') => {
-        const hasStock = await validateStock(item, tipo, 1);
+    const addToCart = async (item: Product | Combo, tipo: 'PRODUCTO' | 'COMBO') => {
+        const hasStock = await validateStock(item, tipo);
         if (!hasStock) {
             alert('No hay suficiente stock disponible');
             return;
@@ -71,27 +78,27 @@ const VentasPage = () => {
         const newItem: CartItem = {
             tipo,
             item,
-            cantidad: 1,
-            subtotal: tipo === 'Producto' 
-                ? (item as Product).precioPorLibra * 1
-                : (item as Combo).precio * 1
+            cantidadLibras: 1,
+            subtotal: tipo === 'PRODUCTO' 
+                ? (item as Product).precioPorLibra 
+                : (item as Combo).precio
         };
 
         setCart(prevCart => {
             const existingItemIndex = prevCart.items.findIndex(
                 i => i.tipo === tipo && 
-                    ((tipo === 'Producto' && (i.item as Product).productoId === (item as Product).productoId) ||
-                     (tipo === 'Combo' && (i.item as Combo).comboId === (item as Combo).comboId))
+                    ((tipo === 'PRODUCTO' && (i.item as Product).productoId === (item as Product).productoId) ||
+                     (tipo === 'COMBO' && (i.item as Combo).comboId === (item as Combo).comboId))
             );
 
             if (existingItemIndex >= 0) {
                 const updatedItems = [...prevCart.items];
-                updatedItems[existingItemIndex].cantidad += 1;
+                updatedItems[existingItemIndex].cantidadLibras += 1;
                 updatedItems[existingItemIndex].subtotal = 
-                    updatedItems[existingItemIndex].cantidad * 
-                    (tipo === 'Producto' 
-                        ? (item as Product).precioPorLibra 
-                        : (item as Combo).precio);
+                    updatedItems[existingItemIndex].cantidadLibras * 
+                    (tipo === 'PRODUCTO' 
+                        ? ((item as Product).precioPorLibra)
+                        : ((item as Combo).precio));
 
                 return {
                     ...prevCart,
@@ -131,7 +138,7 @@ const VentasPage = () => {
 
         // Validar stock de todos los items antes de procesar
         for (const item of cart.items) {
-            const hasStock = await validateStock(item.item, item.tipo, item.cantidad);
+            const hasStock = await validateStock(item.item, item.tipo);
             if (!hasStock) {
                 alert(`No hay suficiente stock para ${item.item.nombre}`);
                 return;
@@ -140,19 +147,22 @@ const VentasPage = () => {
 
         const ventaInput: VentaInput = {
             cliente: cart.cliente,
-            items: cart.items.map(item => ({
+            observaciones: cart.observaciones || '',
+            tipoVenta: 'NORMAL',
+            detalles: cart.items.map(item => ({
                 tipoItem: item.tipo,
-                itemId: item.tipo === 'Producto' 
-                    ? (item.item as Product).productoId! 
-                    : (item.item as Combo).comboId!,
-                cantidad: item.cantidad
-            })),
-            observaciones: cart.observaciones,
-            total: cart.total
+                ...(item.tipo === 'PRODUCTO'
+                    ? { productoId: (item.item as Product).productoId! }
+                    : { comboId: (item.item as Combo).comboId! }
+                ),
+                cantidadLibras: item.cantidadLibras
+            }))
         };
 
         try {
-            await VentaService.create(ventaInput);
+            console.log('Enviando venta:', ventaInput);
+            const response = await VentaService.create(ventaInput);
+            console.log('Venta procesada:', response.data);
             setCart({
                 items: [],
                 total: 0,
@@ -240,7 +250,7 @@ const VentasPage = () => {
                                         </div>
                                         <button
                                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300"
-                                            onClick={() => addToCart(producto, 'Producto')}
+                                            onClick={() => addToCart(producto, 'PRODUCTO')}
                                             disabled={producto.cantidadLibras <= 0}
                                         >
                                             Agregar
@@ -256,7 +266,7 @@ const VentasPage = () => {
                                         </div>
                                         <button
                                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                                            onClick={() => addToCart(combo, 'Combo')}
+                                            onClick={() => addToCart(combo, 'COMBO')}
                                         >
                                             Agregar
                                         </button>
@@ -285,7 +295,7 @@ const VentasPage = () => {
                                     <div>
                                         <p className="font-medium">{item.item.nombre}</p>
                                         <p className="text-sm text-gray-600">
-                                            Cantidad: {item.cantidad} - Subtotal: ${item.subtotal}
+                                            Cantidad: {item.cantidadLibras} - Subtotal: ${item.subtotal}
                                         </p>
                                     </div>
                                     <button

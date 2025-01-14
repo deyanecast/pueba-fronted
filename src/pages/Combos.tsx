@@ -1,23 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import ComboService from '../services/ComboService';
-import { ProductService } from '../services/ProductService';
-import { Combo } from '../services/combo.types';
+import { Product, ProductService } from '../services/ProductService';
+import { Combo, ComboProduct } from '../services/combo.types';
 import axios from 'axios';
-
-interface Product {
-  productoId: number;
-  nombre: string;
-  precio: number;
-  cantidadLibras: number;
-  precioPorLibra: number;
-  tipoEmpaque: string;
-  estaActivo: boolean;
-}
-
-interface ComboProduct {
-  productoId: number;
-  cantidadLibras: number;
-}
 
 interface ComboFormData {
   nombre: string;
@@ -149,7 +134,7 @@ export default function Combos() {
   };
 
   const handleAddProduct = () => {
-    if (selectedProduct && !formData.productos.some(p => p.productoId === selectedProduct.productoId)) {
+    if (selectedProduct?.productoId && !formData.productos.some(p => p.productoId === selectedProduct.productoId)) {
       const newProduct: ComboProduct = {
         productoId: selectedProduct.productoId,
         cantidadLibras: selectedQuantity

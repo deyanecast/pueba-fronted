@@ -11,27 +11,6 @@ export interface Product {
     ultimaActualizacion?: string;
 }
 
-export interface Combo {
-    comboId?: number;
-    nombre: string;
-    descripcion: string;
-    precio: number;
-    productos: {
-        productoId: number;
-        cantidad: number;
-    }[];
-    estaActivo?: boolean;
-    fechaCreacion?: string;
-}
-
-export interface ComboProducto {
-    productoId: number;
-    cantidad: number;
-    nombreProducto?: string;
-    precioUnitario?: number;
-    subtotal?: number;
-}
-
 export interface ProductSearchParams {
     nombre?: string;
     precioMin?: number;
@@ -42,33 +21,33 @@ export interface ProductSearchParams {
 
 export const ProductService = {
     // Get all products
-    getAll: () => api.get('/api/productos'),
+    getAll: () => api.get<Product[]>('/api/productos'),
 
     // Get product by ID
-    getById: (id: number) => api.get(`/api/productos/${id}`),
+    getById: (id: number) => api.get<Product>(`/api/productos/${id}`),
 
     // Get active products
-    getActive: () => api.get('/api/productos/active'),
+    getActive: () => api.get<Product[]>('/api/productos/active'),
 
     // Create new product
     create: (product: Omit<Product, 'productoId' | 'ultimaActualizacion' | 'valorTotal'>) => 
-        api.post('/api/productos', product),
+        api.post<Product>('/api/productos', product),
 
     // Update product
     update: (id: number, product: Partial<Product>) => 
-        api.put(`/api/productos/${id}`, product),
+        api.put<Product>(`/api/productos/${id}`, product),
 
     // Update product status
-    updateStatus: (id: number) => api.patch(`/api/productos/${id}/status`),
+    updateStatus: (id: number) => api.patch<Product>(`/api/productos/${id}/status`),
 
     // Validate product stock
-    validateStock: (id: number) => api.get(`/api/productos/${id}/validate-stock`),
+    validateStock: (id: number) => api.get<{ hasStock: boolean }>(`/api/productos/${id}/validate-stock`),
 
     // Update product stock
-    updateStock: (id: number, stock: number) => api.patch(`/api/productos/${id}/stock`, { stock }),
+    updateStock: (id: number, stock: number) => api.patch<Product>(`/api/productos/${id}/stock`, { stock }),
 
     // Search products with filters
-    search: (params: ProductSearchParams) => api.get('/api/productos/buscar', { params }),
+    search: (params: ProductSearchParams) => api.get<Product[]>('/api/productos/buscar', { params }),
 
     // Helper function to check if stock is low (below 5 pounds)
     esBajoStock: (cantidadLibras: number): boolean => cantidadLibras <= 5
