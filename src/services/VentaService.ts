@@ -46,19 +46,23 @@ export interface DateRange {
     endDate: string;
 }
 
-export interface DailyStats {
-    date: string;
-    total: number;
+export interface VentasRangeResponse {
+    ventas: VentaResponse[];
+    startDate: string;
+    endDate: string;
 }
 
-export interface ReporteVentas {
-    totalVentas: number;
-    montoTotal: number;
+export interface DashboardData {
+    totalVentasHoy: number;
+    ventasRecientes: VentaResponse[];
+    productosStockBajo: Product[];
 }
 
 export const VentaService = {
-    // Get all sales
-    getAll: () => api.get<VentaResponse[]>('/api/ventas'),
+    // Get all sales with optional date filter
+    getAll: (date?: string) => api.get<VentaResponse[]>('/api/ventas', {
+        params: date ? { date } : undefined
+    }),
 
     // Get sale by ID
     getById: (id: number) => api.get<VentaResponse>(`/api/ventas/${id}`),
@@ -68,9 +72,16 @@ export const VentaService = {
 
     // Get sales by date range
     getByDateRange: (range: DateRange) => 
-        api.get<VentaResponse[]>('/api/ventas/range', { params: range }),
+        api.get<VentasRangeResponse>('/api/ventas/range', { 
+            params: range
+        }),
 
     // Get total sales by date
     getTotalByDate: (date: string) => 
-        api.get<DailyStats>('/api/ventas/total/date', { params: { date } }),
+        api.get<{ total: number }>('/api/ventas/total/date', { 
+            params: { date }
+        }),
+
+    // Get dashboard data
+    getDashboardData: () => api.get<DashboardData>('/api/ventas/dashboard')
 }; 

@@ -13,4 +13,4 @@ export interface Cart {
     total: number;
     cliente: string;
     observaciones?: string;
-} 
+}     

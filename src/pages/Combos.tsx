@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ComboService from '../services/ComboService';
 import { Product, ProductService } from '../services/ProductService';
 import { Combo, ComboProduct } from '../services/combo.types';
@@ -26,53 +26,60 @@ export default function Combos() {
   const [savingCombo, setSavingCombo] = useState(false);
   const [combos, setCombos] = useState<Combo[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [totalCalculado, setTotalCalculado] = useState<number>(0);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedQuantity, setSelectedQuantity] = useState<number>(1);
 
+  // Memoize the total calculation
+  const totalCalculado = useMemo(() => {
+    return formData.productos.reduce((sum, product) => {
+      const foundProduct = products.find(p => p.productoId === product.productoId);
+      return sum + (foundProduct?.precioPorLibra || 0) * product.cantidadLibras;
+    }, 0);
+  }, [formData.productos, products]);
+
   useEffect(() => {
-    fetchCombos();
-    fetchProducts();
+    let isSubscribed = true;
+
+    const loadInitialData = async () => {
+      try {
+        setError('');
+        setLoading(true);
+        
+        // Load products and combos in parallel
+        const [productsResponse, combosResponse] = await Promise.all([
+          ProductService.getActive(),
+          ComboService.getAll()
+        ]);
+
+        if (isSubscribed) {
+          if (productsResponse.data) {
+            setProducts(productsResponse.data);
+          }
+          if (combosResponse.data) {
+            setCombos(combosResponse.data);
+          }
+        }
+      } catch (error) {
+        if (isSubscribed) {
+          console.error('Error loading data:', error);
+          setError(axios.isAxiosError(error) ? error.message : 'Error al cargar los datos');
+        }
+      } finally {
+        if (isSubscribed) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadInitialData();
+    return () => { isSubscribed = false };
   }, []);
-
-  const fetchCombos = async () => {
-    try {
-      const response = await ComboService.getAll();
-      setCombos(response.data);
-      setError('');
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        setError(error.message);
-      } else {
-        setError('Error al cargar los combos');
-      }
-      console.error('Error fetching combos:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchProducts = async () => {
-    try {
-      const response = await ProductService.getActive();
-      setProducts(response.data);
-      setError('');
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        setError(error.message);
-      } else {
-        setError('Error al cargar los productos');
-      }
-      console.error('Error fetching products:', error);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    if (savingCombo) return;
-    if (formData.productos.length === 0) {
+    if (savingCombo || formData.productos.length === 0) {
       setError('Debe agregar al menos un producto al combo');
       return;
     }
@@ -84,10 +91,7 @@ export default function Combos() {
         nombre: formData.nombre.trim(),
         descripcion: formData.descripcion.trim(),
         precio: Number(formData.precio),
-        productos: formData.productos.map(p => ({
-          productoId: p.productoId,
-          cantidadLibras: p.cantidadLibras
-        }))
+        productos: formData.productos
       };
 
       if (editingCombo) {
@@ -96,74 +100,55 @@ export default function Combos() {
         await ComboService.create(comboData);
       }
       
-      await fetchCombos();
+      const response = await ComboService.getAll();
+      setCombos(response.data);
       resetForm();
       setError('');
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        setError(error.response?.data?.message || 'Error al guardar el combo');
-      } else {
-        setError('Error al guardar el combo');
-      }
+      setError(axios.isAxiosError(error) ? error.response?.data?.message || 'Error al guardar el combo' : 'Error al guardar el combo');
       console.error('Error saving combo:', error);
     } finally {
       setSavingCombo(false);
     }
   };
 
-  const calculateTotal = (selectedProducts: ComboProduct[]) => {
-    const total = selectedProducts.reduce((sum, product) => {
-      const foundProduct = products.find(p => p.productoId === product.productoId);
-      return sum + (foundProduct?.precioPorLibra || 0) * product.cantidadLibras;
-    }, 0);
-    setTotalCalculado(total);
-    return total;
-  };
-
   const handleProductSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedProductId = parseInt(e.target.value);
     const product = products.find(p => p.productoId === selectedProductId);
-    
-    if (product) {
-      setSelectedProduct(product);
-      setSelectedQuantity(1);
-    } else {
-      setSelectedProduct(null);
-      setSelectedQuantity(1);
-    }
+    setSelectedProduct(product || null);
+    setSelectedQuantity(1);
   };
 
   const handleAddProduct = () => {
-    if (selectedProduct?.productoId && !formData.productos.some(p => p.productoId === selectedProduct.productoId)) {
+    if (!selectedProduct?.productoId) return;
+    
+    if (!formData.productos.some(p => p.productoId === selectedProduct.productoId)) {
       const newProduct: ComboProduct = {
         productoId: selectedProduct.productoId,
         cantidadLibras: selectedQuantity
       };
-      const updatedProducts = [...formData.productos, newProduct];
-      setFormData({
-        ...formData,
-        productos: updatedProducts
-      });
-      calculateTotal(updatedProducts);
+
+      setFormData(prev => ({
+        ...prev,
+        productos: [...prev.productos, newProduct]
+      }));
+      
       setSelectedProduct(null);
       setSelectedQuantity(1);
     }
   };
 
   const handleRemoveProduct = (productId: number) => {
-    const updatedProducts = formData.productos.filter(p => p.productoId !== productId);
-    setFormData({
-      ...formData,
-      productos: updatedProducts
-    });
-    calculateTotal(updatedProducts);
+    setFormData(prev => ({
+      ...prev,
+      productos: prev.productos.filter(p => p.productoId !== productId)
+    }));
   };
 
   const resetForm = () => {
     setFormData(initialFormData);
     setEditingCombo(null);
     setError('');
-    setTotalCalculado(0);
     setSelectedProduct(null);
   };
 
