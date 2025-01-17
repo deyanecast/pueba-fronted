@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { VentaService, VentaResponse, DateRange, VentasRangeResponse } from '../services/VentaService';
+import { VentaService, VentaResponse, DateRange } from '../services/VentaService';
 
 type TimeFrame = 'day' | 'month';
 
