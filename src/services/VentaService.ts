@@ -73,7 +73,7 @@ export const VentaService = {
     // Get sales by date range
     getByDateRange: (range: DateRange) => 
         api.get<VentasRangeResponse>('/api/ventas/range', { 
-            params: range
+            params: range 
         }),
 
     // Get total sales by date
